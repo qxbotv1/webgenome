@@ -1,4 +1,4 @@
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -6,8 +6,12 @@ export const runtime = "nodejs";
 const EMAIL_SET_KEY = "waitlist:emails";
 const SIGNUP_LOG_KEY = "waitlist:log";
 
-function hasKvConfig() {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+const redis = Redis.fromEnv();
+
+function hasRedisConfig() {
+  return Boolean(
+    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
+  );
 }
 
 function normalizeEmail(email: unknown) {
@@ -19,7 +23,7 @@ function isValidEmail(email: string) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!hasKvConfig()) {
+  if (!hasRedisConfig()) {
     return NextResponse.json(
       { error: "Waitlist storage is not configured." },
       { status: 503 },
@@ -37,7 +41,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const exists = await kv.sismember(EMAIL_SET_KEY, normalizedEmail);
+    const exists = await redis.sismember(EMAIL_SET_KEY, normalizedEmail);
 
     if (exists) {
       return NextResponse.json(
@@ -46,8 +50,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await kv.sadd(EMAIL_SET_KEY, normalizedEmail);
-    await kv.lpush(
+    await redis.sadd(EMAIL_SET_KEY, normalizedEmail);
+    await redis.lpush(
       SIGNUP_LOG_KEY,
       JSON.stringify({ email: normalizedEmail, ts: Date.now() }),
     );
@@ -66,7 +70,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  if (!hasKvConfig()) {
+  if (!hasRedisConfig()) {
     return NextResponse.json(
       { error: "Waitlist storage is not configured." },
       { status: 503 },
@@ -74,7 +78,7 @@ export async function GET() {
   }
 
   try {
-    const count = await kv.scard(EMAIL_SET_KEY);
+    const count = await redis.scard(EMAIL_SET_KEY);
 
     return NextResponse.json({ count });
   } catch (err) {
