@@ -1,8 +1,37 @@
+import Link from "next/link";
+
 const LINKS = {
-  Products: ["Crawl", "Auth", "Flow", "Monitor", "Test", "Agent", "API", "Mobile"],
-  "Use Cases": ["QA Testing", "AI Agents", "RPA Automation", "Competitive Intel", "Enterprise"],
-  Developers: ["Documentation", "API Reference", "Changelog", "Status", "GitHub"],
-  Company: ["About", "Blog", "Pricing", "Privacy", "Terms"],
+  Products: [
+    { label: "Crawl", href: "/products" },
+    { label: "Auth", href: "/products" },
+    { label: "Flow", href: "/products" },
+    { label: "Monitor", href: "/products" },
+    { label: "Test", href: "/products" },
+    { label: "Agent", href: "/products" },
+    { label: "API", href: "/products" },
+    { label: "Mobile", href: "/products" },
+  ],
+  "Use Cases": [
+    { label: "QA Testing", href: "/use-cases" },
+    { label: "AI Agents", href: "/use-cases" },
+    { label: "RPA Automation", href: "/use-cases" },
+    { label: "Competitive Intel", href: "/use-cases" },
+    { label: "Enterprise", href: "/use-cases" },
+  ],
+  Developers: [
+    { label: "Documentation", href: "/docs" },
+    { label: "API Reference", href: "/docs" },
+    { label: "Changelog", href: "/docs" },
+    { label: "Status", href: "/docs" },
+    { label: "GitHub", href: "/docs" },
+  ],
+  Company: [
+    { label: "About", href: "/" },
+    { label: "Blog", href: "/blog" },
+    { label: "Pricing", href: "/pricing" },
+    { label: "Privacy", href: "/docs" },
+    { label: "Terms", href: "/docs" },
+  ],
 };
 
 export default function Footer() {
@@ -54,14 +83,14 @@ export default function Footer() {
                 {section}
               </div>
               <ul className="flex flex-col gap-3">
-                {items.map((item) => (
-                  <li key={item}>
-                    <a
-                      href="#"
+                {items.map(({ label, href }) => (
+                  <li key={`${section}-${label}`}>
+                    <Link
+                      href={href}
                       className="text-xs text-[#4A6080] transition-colors hover:text-[#00D4FF]"
                     >
-                      {item}
-                    </a>
+                      {label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -76,9 +105,9 @@ export default function Footer() {
           </p>
           <div className="flex gap-5">
             {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((t) => (
-              <a key={t} href="#" className="text-xs text-[#4A6080] transition-colors hover:text-[#00D4FF]">
+              <Link key={t} href="/docs" className="text-xs text-[#4A6080] transition-colors hover:text-[#00D4FF]">
                 {t}
-              </a>
+              </Link>
             ))}
           </div>
         </div>

@@ -18,8 +18,9 @@
   --danger:    #FF4D6A;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; font-size: 16px; }
+html, body { min-height: 100%; margin: 0; }
 
 body {
   background: var(--bg);
@@ -29,6 +30,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
 }
+
+a { color: inherit; text-decoration: none; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
 
 ::selection { background: var(--teal); color: #080D1A; }
 ::-webkit-scrollbar { width: 5px; }
@@ -42,4 +47,9 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.wg-container {
+  width: min(1180px, calc(100% - 48px));
+  margin-inline: auto;
 }

@@ -1,58 +1,59 @@
-import fs from "fs";
-import path from "path";
-
+import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const FILE_PATH = path.join(process.cwd(), "waitlist.json");
+const EMAIL_SET_KEY = "waitlist:emails";
+const SIGNUP_LOG_KEY = "waitlist:log";
 
-function readWaitlist(): string[] {
-  try {
-    if (!fs.existsSync(FILE_PATH)) return [];
-
-    const data = fs.readFileSync(FILE_PATH, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
+function hasKvConfig() {
+  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
 
-function writeWaitlist(emails: string[]) {
-  fs.writeFileSync(FILE_PATH, JSON.stringify(emails, null, 2));
+function normalizeEmail(email: unknown) {
+  return typeof email === "string" ? email.toLowerCase().trim() : "";
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export async function POST(req: NextRequest) {
+  if (!hasKvConfig()) {
+    return NextResponse.json(
+      { error: "Waitlist storage is not configured." },
+      { status: 503 },
+    );
+  }
+
   try {
     const { email } = await req.json();
-    const normalizedEmail =
-      typeof email === "string" ? email.toLowerCase().trim() : "";
+    const normalizedEmail = normalizeEmail(email);
 
-    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+    if (!isValidEmail(normalizedEmail)) {
       return NextResponse.json(
         { error: "Invalid email address." },
         { status: 400 },
       );
     }
 
-    const emails = readWaitlist();
+    const exists = await kv.sismember(EMAIL_SET_KEY, normalizedEmail);
 
-    if (emails.includes(normalizedEmail)) {
+    if (exists) {
       return NextResponse.json(
-        { error: "This email is already on the waitlist." },
-        { status: 409 },
+        { message: "Already on the waitlist!" },
+        { status: 200 },
       );
     }
 
-    emails.push(normalizedEmail);
-    writeWaitlist(emails);
-
-    console.log(
-      `Waitlist signup: ${normalizedEmail} | Total: ${emails.length}`,
+    await kv.sadd(EMAIL_SET_KEY, normalizedEmail);
+    await kv.lpush(
+      SIGNUP_LOG_KEY,
+      JSON.stringify({ email: normalizedEmail, ts: Date.now() }),
     );
 
     return NextResponse.json(
-      { success: true, message: "Added to waitlist." },
+      { success: true, message: "You're on the list!" },
       { status: 200 },
     );
   } catch (err) {
@@ -65,7 +66,22 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  const emails = readWaitlist();
+  if (!hasKvConfig()) {
+    return NextResponse.json(
+      { error: "Waitlist storage is not configured." },
+      { status: 503 },
+    );
+  }
 
-  return NextResponse.json({ count: emails.length, emails });
+  try {
+    const count = await kv.scard(EMAIL_SET_KEY);
+
+    return NextResponse.json({ count });
+  } catch (err) {
+    console.error("Waitlist count error:", err);
+    return NextResponse.json(
+      { error: "Server error. Please try again." },
+      { status: 500 },
+    );
+  }
 }

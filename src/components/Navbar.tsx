@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 30);
@@ -13,7 +15,13 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
-  const navLinks = ["Products", "Use Cases", "Pricing", "Docs", "Blog"];
+  const navLinks = [
+    { label: "Products", href: "/products" },
+    { label: "Use Cases", href: "/use-cases" },
+    { label: "Pricing", href: "/pricing" },
+    { label: "Docs", href: "/docs" },
+    { label: "Blog", href: "/blog" },
+  ];
 
   return (
     <nav
@@ -40,14 +48,15 @@ export default function Navbar() {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-7">
-          {navLinks.map((l) => (
-            <a
-              key={l}
-              href={`#${l.toLowerCase().replace(" ", "-")}`}
-              className="text-sm font-medium text-[#8A9FBF] transition-colors duration-150 hover:text-[#00D4FF]"
+          {navLinks.map(({ label, href }) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-sm font-medium transition-colors duration-150 hover:text-[#00D4FF]"
+              style={{ color: pathname === href ? "#00D4FF" : "#8A9FBF" }}
             >
-              {l}
-            </a>
+              {label}
+            </Link>
           ))}
         </div>
 
@@ -59,13 +68,13 @@ export default function Navbar() {
           >
             Sign In
           </a>
-          <a
-            href="#waitlist"
+          <Link
+            href="/#waitlist"
             className="text-sm font-bold px-5 py-2 rounded-lg transition-all duration-150 hover:opacity-90"
             style={{ background: "linear-gradient(135deg,#00D4FF,#0080A6)", color: "#080D1A" }}
           >
             Start Free Crawl
-          </a>
+          </Link>
         </div>
 
         {/* Mobile toggle */}
@@ -86,25 +95,25 @@ export default function Navbar() {
           className="md:hidden px-6 pt-2 pb-6 flex flex-col gap-3 border-t"
           style={{ background: "rgba(8,13,26,0.98)", borderColor: "#1E2F4A" }}
         >
-          {navLinks.map((l) => (
-            <a
-              key={l}
-              href={`#${l.toLowerCase().replace(" ", "-")}`}
+          {navLinks.map(({ label, href }) => (
+            <Link
+              key={href}
+              href={href}
               className="text-sm py-2"
-              style={{ color: "#8A9FBF" }}
+              style={{ color: pathname === href ? "#00D4FF" : "#8A9FBF" }}
               onClick={() => setOpen(false)}
             >
-              {l}
-            </a>
+              {label}
+            </Link>
           ))}
-          <a
-            href="#waitlist"
+          <Link
+            href="/#waitlist"
             className="text-sm font-bold px-5 py-3 rounded-lg text-center mt-2"
             style={{ background: "linear-gradient(135deg,#00D4FF,#0080A6)", color: "#080D1A" }}
             onClick={() => setOpen(false)}
           >
             Start Free Crawl
-          </a>
+          </Link>
         </div>
       )}
     </nav>
