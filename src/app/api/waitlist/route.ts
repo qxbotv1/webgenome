@@ -8,91 +8,47 @@ const SIGNUP_LOG_KEY = "waitlist:log";
 
 const redis = Redis.fromEnv();
 
-function hasRedisConfig() {
-  return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
-  );
-}
-
-function missingConfigResponse() {
-  return NextResponse.json(
-    {
-      error: "Waitlist storage is not configured.",
-      debug: {
-        hasUpstashUrl: Boolean(process.env.UPSTASH_REDIS_REST_URL),
-        hasUpstashToken: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN),
-      },
-    },
-    { status: 503 },
-  );
-}
-
-function normalizeEmail(email: unknown) {
-  return typeof email === "string" ? email.toLowerCase().trim() : "";
-}
-
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
 export async function POST(req: NextRequest) {
-  if (!hasRedisConfig()) {
-    return missingConfigResponse();
-  }
-
   try {
-    const { email } = await req.json();
-    const normalizedEmail = normalizeEmail(email);
+    const body = await req.json();
+    const email =
+      typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
 
-    if (!isValidEmail(normalizedEmail)) {
+    if (!email || !email.includes("@") || !email.includes(".")) {
       return NextResponse.json(
         { error: "Invalid email address." },
         { status: 400 },
       );
     }
 
-    const exists = await redis.sismember(EMAIL_SET_KEY, normalizedEmail);
+    const exists = await redis.sismember(EMAIL_SET_KEY, email);
 
     if (exists) {
-      return NextResponse.json(
-        { message: "Already on the waitlist!" },
-        { status: 200 },
-      );
+      return NextResponse.json({ message: "Already on the waitlist!" });
     }
 
-    await redis.sadd(EMAIL_SET_KEY, normalizedEmail);
+    await redis.sadd(EMAIL_SET_KEY, email);
     await redis.lpush(
       SIGNUP_LOG_KEY,
-      JSON.stringify({ email: normalizedEmail, ts: Date.now() }),
+      JSON.stringify({ email, ts: Date.now() }),
     );
 
-    return NextResponse.json(
-      { success: true, message: "You're on the list!" },
-      { status: 200 },
-    );
+    return NextResponse.json({ success: true, message: "You're on the list!" });
   } catch (err) {
-    console.error("Waitlist API error:", err);
+    console.error("[waitlist] POST error:", err);
     return NextResponse.json(
-      { error: "Server error. Please try again." },
-      { status: 500 },
+      { error: "Service temporarily unavailable." },
+      { status: 503 },
     );
   }
 }
 
 export async function GET() {
-  if (!hasRedisConfig()) {
-    return missingConfigResponse();
-  }
-
   try {
     const count = await redis.scard(EMAIL_SET_KEY);
 
     return NextResponse.json({ count });
-  } catch (err) {
-    console.error("Waitlist count error:", err);
-    return NextResponse.json(
-      { error: "Server error. Please try again." },
-      { status: 500 },
-    );
+  } catch {
+    return NextResponse.json({ count: 0 });
   }
 }
