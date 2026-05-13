@@ -14,6 +14,19 @@ function hasRedisConfig() {
   );
 }
 
+function missingConfigResponse() {
+  return NextResponse.json(
+    {
+      error: "Waitlist storage is not configured.",
+      debug: {
+        hasUpstashUrl: Boolean(process.env.UPSTASH_REDIS_REST_URL),
+        hasUpstashToken: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN),
+      },
+    },
+    { status: 503 },
+  );
+}
+
 function normalizeEmail(email: unknown) {
   return typeof email === "string" ? email.toLowerCase().trim() : "";
 }
@@ -24,10 +37,7 @@ function isValidEmail(email: string) {
 
 export async function POST(req: NextRequest) {
   if (!hasRedisConfig()) {
-    return NextResponse.json(
-      { error: "Waitlist storage is not configured." },
-      { status: 503 },
-    );
+    return missingConfigResponse();
   }
 
   try {
@@ -71,10 +81,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   if (!hasRedisConfig()) {
-    return NextResponse.json(
-      { error: "Waitlist storage is not configured." },
-      { status: 503 },
-    );
+    return missingConfigResponse();
   }
 
   try {
