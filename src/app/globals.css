@@ -1,41 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0A0F1E;
-  --foreground: #F0F4FF;
-  --primary: #00D4FF;
-  --primary-dark: #0095B3;
-  --surface: #111827;
-  --surface-2: #1A2236;
-  --border: #1E2D4A;
-  --muted: #6B7FA3;
-  --success: #00E5A0;
+  --bg:        #080D1A;
+  --bg-2:      #0D1525;
+  --bg-3:      #111C2E;
+  --surface:   #141F33;
+  --surface-2: #1A2840;
+  --border:    #1E2F4A;
+  --border-2:  #243659;
+  --teal:      #00D4FF;
+  --teal-dim:  #0095B3;
+  --teal-glow: rgba(0,212,255,0.12);
+  --green:     #00E5A0;
+  --text-1:    #EFF4FF;
+  --text-2:    #8A9FBF;
+  --text-3:    #4A6080;
+  --danger:    #FF4D6A;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
 }
 
-::selection {
-  background: var(--primary);
-  color: #0A0F1E;
-}
+::selection { background: var(--teal); color: #080D1A; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--teal-dim); }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--background); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary-dark); }
+/* Utility */
+.glow-text {
+  background: linear-gradient(90deg, #00D4FF 0%, #00A8CC 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

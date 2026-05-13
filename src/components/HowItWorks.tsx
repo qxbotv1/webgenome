@@ -1,54 +1,70 @@
 export default function HowItWorks() {
   const steps = [
     {
-      num: "01",
-      title: "Enter any URL",
-      body: "Paste any website URL — public site, authenticated dashboard, or mobile app. Optionally provide login credentials for full authenticated access.",
+      n: "01",
       icon: "🌐",
+      title: "Enter any URL",
+      body: "Paste any URL — public site, authenticated portal, or SaaS dashboard. Add login credentials for full post-login access.",
     },
     {
-      num: "02",
-      title: "WebGenome crawls & maps",
-      body: "Our headless browser visits every accessible page, clicks every button, fills every form, and captures the complete DOM tree — including post-login workflows.",
+      n: "02",
       icon: "🧬",
+      title: "We crawl & map everything",
+      body: "Our headless browser visits every page, clicks every element, and captures the complete DOM tree — including authenticated workflows.",
     },
     {
-      num: "03",
-      title: "Export structured intelligence",
-      body: "Download everything as JSON, CSV, or HTML. Plug directly into your automation tools, AI agents, QA pipelines, or API integrations.",
+      n: "03",
       icon: "⚡",
+      title: "Export structured intelligence",
+      body: "Download as JSON, CSV, or HTML. Plug directly into AI agents, QA pipelines, RPA tools, or your own API integrations.",
     },
   ];
 
   return (
-    <section id="how-it-works" className="py-24 px-6" style={{ background: "#0D1929" }}>
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-4xl font-black mb-4" style={{ color: "#F0F4FF" }}>
+    <section
+      id="how-it-works"
+      className="py-24 px-6"
+      style={{ background: "#0D1525" }}
+    >
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center max-w-xl mx-auto mb-16">
+          <h2 className="text-4xl font-black mb-4" style={{ color: "#EFF4FF" }}>
             From URL to intelligence<br />in minutes
           </h2>
-          <p style={{ color: "#6B7FA3" }}>Three steps. Zero manual work.</p>
+          <p style={{ color: "#8A9FBF" }}>Three steps. Zero manual work.</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 relative">
-          <div
-            className="hidden md:block absolute top-12 left-[20%] right-[20%] h-px"
-            style={{ background: "linear-gradient(90deg,transparent,#1E2D4A,transparent)" }}
-          />
+        <div className="grid md:grid-cols-3 gap-6">
+          {steps.map(({ n, icon, title, body }, i) => (
+            <div
+              key={n}
+              className="relative p-8 rounded-2xl border flex flex-col gap-5"
+              style={{ background: "#111C2E", borderColor: "#1E2F4A" }}
+            >
+              {/* Step number + connector */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black border-2 shrink-0"
+                  style={{ borderColor: "#00D4FF", color: "#00D4FF", background: "rgba(0,212,255,0.08)" }}
+                >
+                  {n}
+                </div>
+                {i < 2 && (
+                  <div className="hidden md:block flex-1 h-px" style={{ background: "linear-gradient(90deg,#1E2F4A,transparent)" }} />
+                )}
+              </div>
 
-          {steps.map(({ num, title, body, icon }) => (
-            <div key={num} className="flex flex-col items-center text-center gap-4">
               <div
-                className="w-24 h-24 rounded-full flex items-center justify-center text-3xl border-2 relative z-10"
-                style={{ background: "#111827", borderColor: "#00D4FF" }}
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                style={{ background: "#1A2840" }}
               >
                 {icon}
               </div>
-              <div className="text-xs font-black tracking-widest uppercase" style={{ color: "#00D4FF" }}>
-                Step {num}
+
+              <div>
+                <h3 className="font-bold text-lg mb-2" style={{ color: "#EFF4FF" }}>{title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "#8A9FBF" }}>{body}</p>
               </div>
-              <h3 className="text-xl font-bold" style={{ color: "#F0F4FF" }}>{title}</h3>
-              <p className="text-sm leading-relaxed max-w-xs" style={{ color: "#6B7FA3" }}>{body}</p>
             </div>
           ))}
         </div>

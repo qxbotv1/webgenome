@@ -1,138 +1,94 @@
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-
-const plans = [
+const PLANS = [
   {
-    name: "Starter",
-    price: "$49",
-    period: "/month",
-    desc: "For freelancers and small teams getting started",
-    features: [
-      "5 crawls per month",
-      "500 pages per crawl",
-      "JSON + CSV exports",
-      "Screenshot capture",
-      "Email support",
-    ],
-    cta: "Start Free Trial",
-    highlight: false,
+    name: "Starter", price: "$49", period: "/month",
+    desc: "For freelancers and small teams",
+    features: ["5 crawls/month", "500 pages/crawl", "JSON + CSV exports", "Screenshots", "Email support"],
+    cta: "Start Free Trial", hot: false,
   },
   {
-    name: "Pro",
-    price: "$299",
-    period: "/month",
+    name: "Pro", price: "$299", period: "/month",
     desc: "For agencies, AI startups, and growing teams",
-    features: [
-      "50 crawls per month",
-      "5,000 pages per crawl",
-      "All export formats",
-      "Authenticated crawling",
-      "DOM Monitor (daily scans)",
-      "Workflow maps",
-      "API access",
-      "Priority support",
-    ],
-    cta: "Start Free Trial",
-    highlight: true,
+    features: ["50 crawls/month", "5,000 pages/crawl", "All export formats", "Authenticated crawling", "DOM Monitor", "Workflow maps", "API access", "Priority support"],
+    cta: "Start Free Trial", hot: true,
   },
   {
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    desc: "For large teams needing full platform access",
-    features: [
-      "Unlimited crawls",
-      "Unlimited pages",
-      "Role-based crawling",
-      "SAML / SSO auth",
-      "Dedicated infrastructure",
-      "SLA guarantee",
-      "Slack integration",
-      "Custom integrations",
-    ],
-    cta: "Contact Sales",
-    highlight: false,
+    name: "Enterprise", price: "Custom", period: "",
+    desc: "For large teams needing the full stack",
+    features: ["Unlimited crawls", "Unlimited pages", "Role-based crawling", "SAML / SSO auth", "Dedicated infra", "SLA guarantee", "Slack + custom integrations"],
+    cta: "Contact Sales", hot: false,
   },
   {
-    name: "API",
-    price: "$0.50",
-    period: "/crawl",
+    name: "API", price: "$0.50", period: "/crawl",
     desc: "For developers integrating crawl intelligence",
-    features: [
-      "Pay as you go",
-      "Full REST API",
-      "No monthly commitment",
-      "JSON responses",
-      "Webhook support",
-    ],
-    cta: "Get API Key",
-    highlight: false,
+    features: ["Pay-as-you-go", "Full REST API", "No commitment", "JSON responses", "Webhook support"],
+    cta: "Get API Key", hot: false,
   },
 ];
 
 export default function Pricing() {
   return (
-    <section id="pricing" className="py-24 px-6" style={{ background: "#0A0F1E" }}>
+    <section id="pricing" className="py-24 px-6" style={{ background: "#080D1A" }}>
       <div className="max-w-7xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-4xl font-black mb-4" style={{ color: "#F0F4FF" }}>
+        <div className="text-center max-w-xl mx-auto mb-16">
+          <h2 className="text-4xl font-black mb-4" style={{ color: "#EFF4FF" }}>
             Simple, transparent pricing
           </h2>
-          <p style={{ color: "#6B7FA3" }}>
-            Start free. No credit card required. Cancel anytime.
-          </p>
+          <p style={{ color: "#8A9FBF" }}>Start free. No credit card required. Cancel anytime.</p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {plans.map(({ name, price, period, desc, features, cta, highlight }) => (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {PLANS.map(({ name, price, period, desc, features, cta, hot }) => (
             <div
               key={name}
-              className="rounded-2xl border p-6 flex flex-col gap-5 relative"
+              className="relative flex flex-col p-7 rounded-2xl border gap-6"
               style={{
-                background: highlight ? "linear-gradient(160deg,#0D1E30,#0A1525)" : "#111827",
-                borderColor: highlight ? "#00D4FF" : "#1E2D4A",
-                boxShadow: highlight ? "0 0 40px rgba(0,212,255,0.1)" : "none",
+                background: hot ? "linear-gradient(160deg,#0E1E33,#0A1728)" : "#0D1525",
+                borderColor: hot ? "#00D4FF" : "#1E2F4A",
+                boxShadow: hot ? "0 0 50px rgba(0,212,255,0.08), inset 0 1px 0 rgba(0,212,255,0.15)" : "none",
               }}
             >
-              {highlight && (
-                <Badge
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 text-xs font-bold"
-                  style={{ background: "#00D4FF", color: "#0A0F1E" }}
+              {hot && (
+                <div
+                  className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider"
+                  style={{ background: "linear-gradient(135deg,#00D4FF,#0080A6)", color: "#080D1A" }}
                 >
                   Most Popular
-                </Badge>
+                </div>
               )}
 
               <div>
-                <div className="font-bold text-lg mb-1" style={{ color: "#F0F4FF" }}>{name}</div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black" style={{ color: highlight ? "#00D4FF" : "#F0F4FF" }}>
+                <div className="font-bold text-base mb-1.5" style={{ color: "#EFF4FF" }}>{name}</div>
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span
+                    className="text-3xl font-black"
+                    style={{ color: hot ? "#00D4FF" : "#EFF4FF" }}
+                  >
                     {price}
                   </span>
-                  <span className="text-sm" style={{ color: "#6B7FA3" }}>{period}</span>
+                  {period && <span className="text-sm" style={{ color: "#4A6080" }}>{period}</span>}
                 </div>
-                <p className="text-xs mt-2 leading-relaxed" style={{ color: "#6B7FA3" }}>{desc}</p>
+                <p className="text-xs leading-relaxed" style={{ color: "#8A9FBF" }}>{desc}</p>
               </div>
 
-              <ul className="flex flex-col gap-2 flex-1">
+              <ul className="flex flex-col gap-2.5 flex-1">
                 {features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-xs" style={{ color: "#6B7FA3" }}>
-                    <span style={{ color: "#00D4FF", flexShrink: 0 }}>✓</span> {f}
+                  <li key={f} className="flex items-start gap-2.5 text-xs" style={{ color: "#8A9FBF" }}>
+                    <span className="shrink-0 font-bold mt-0.5" style={{ color: hot ? "#00D4FF" : "#4A6080" }}>✓</span>
+                    {f}
                   </li>
                 ))}
               </ul>
 
-              <Button
-                className="w-full font-bold"
+              <button
+                className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-150 hover:opacity-90"
                 style={
-                  highlight
-                    ? { background: "linear-gradient(135deg,#00D4FF,#0080A6)", color: "#0A0F1E", border: "none" }
-                    : { background: "transparent", borderColor: "#1E2D4A", color: "#6B7FA3" }
+                  hot
+                    ? { background: "linear-gradient(135deg,#00D4FF,#0080A6)", color: "#080D1A" }
+                    : { background: "#141F33", color: "#8A9FBF", border: "1px solid #1E2F4A" }
                 }
-                variant={highlight ? "default" : "outline"}
               >
                 {cta}
-              </Button>
+              </button>
             </div>
           ))}
         </div>

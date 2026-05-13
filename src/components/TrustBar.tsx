@@ -1,37 +1,38 @@
 export default function TrustBar() {
-  const stats = [
-    { val: "QA Teams", desc: "Auto test generation" },
-    { val: "AI Startups", desc: "Website memory layer" },
-    { val: "RPA Agencies", desc: "Workflow automation" },
-    { val: "Enterprises", desc: "Legacy documentation" },
-    { val: "Developers", desc: "API integrations" },
+  const items = [
+    { icon: "🧪", label: "QA Teams" },
+    { icon: "🤖", label: "AI Startups" },
+    { icon: "⚙️", label: "RPA Agencies" },
+    { icon: "🏢", label: "Enterprises" },
+    { icon: "👨‍💻", label: "Developers" },
+    { icon: "🔍", label: "SEO Agencies" },
   ];
 
   return (
-    <section
-      className="py-12 border-y"
-      style={{ borderColor: "#1E2D4A", background: "#0D1929" }}
+    <div
+      className="py-10 border-y"
+      style={{ background: "#0D1525", borderColor: "#1E2F4A" }}
     >
       <div className="max-w-7xl mx-auto px-6">
-        <p className="text-center text-sm mb-8 uppercase tracking-widest font-semibold" style={{ color: "#6B7FA3" }}>
+        <p
+          className="text-center text-xs font-bold uppercase tracking-[0.18em] mb-7"
+          style={{ color: "#4A6080" }}
+        >
           Trusted by teams building the AI-first internet
         </p>
-        <div className="flex flex-wrap justify-center gap-6">
-          {stats.map(({ val, desc }) => (
+        <div className="flex flex-wrap justify-center gap-3">
+          {items.map(({ icon, label }) => (
             <div
-              key={val}
-              className="flex items-center gap-3 px-6 py-3 rounded-xl border"
-              style={{ background: "#111827", borderColor: "#1E2D4A" }}
+              key={label}
+              className="flex items-center gap-2.5 px-5 py-2.5 rounded-full border"
+              style={{ background: "#141F33", borderColor: "#1E2F4A" }}
             >
-              <div className="w-2 h-2 rounded-full" style={{ background: "#00D4FF" }} />
-              <div>
-                <div className="text-sm font-bold" style={{ color: "#F0F4FF" }}>{val}</div>
-                <div className="text-xs" style={{ color: "#6B7FA3" }}>{desc}</div>
-              </div>
+              <span className="text-base">{icon}</span>
+              <span className="text-sm font-semibold" style={{ color: "#8A9FBF" }}>{label}</span>
             </div>
           ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
