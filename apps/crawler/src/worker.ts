@@ -18,6 +18,19 @@ function pageSlug(url: string, index: number): string {
   return slug || `page_${index}`;
 }
 
+function normalizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.hash = "";
+    parsed.searchParams.delete("utm_source");
+    parsed.searchParams.delete("utm_medium");
+    parsed.searchParams.delete("utm_campaign");
+    return parsed.href.replace(/\/$/, ""); // remove trailing slash
+  } catch {
+    return url;
+  }
+}
+
 function uniqueInternalLinks(baseUrl: string, links: string[]): string[] {
   const origin = new URL(baseUrl).origin;
   const out = new Set<string>();
@@ -58,15 +71,19 @@ async function crawlSite(
   });
 
   const visited = new Set<string>();
+  const canonicalVisited = new Set<string>();
   const pending = [url];
   let pagesCrawled = 0;
 
   try {
     while (pending.length > 0 && pagesCrawled < limit) {
       const pageUrl = pending.shift();
-      if (!pageUrl || visited.has(pageUrl)) continue;
+      const canonical = normalizeUrl(pageUrl || "");
+
+      if (!pageUrl || visited.has(pageUrl) || canonicalVisited.has(canonical)) continue;
 
       visited.add(pageUrl);
+      canonicalVisited.add(canonical);
       const page = await context.newPage();
 
       try {
@@ -78,7 +95,27 @@ async function crawlSite(
         await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => undefined);
 
         const title = await page.title();
-        const elements = await extractElements(page);
+        const statusCode = response?.status() ?? null;
+
+        // Gate detection heuristics
+        let isGated = false;
+        let gateReason = "";
+
+        if (statusCode === 403 || statusCode === 429) {
+          isGated = true;
+          gateReason = `HTTP ${statusCode}`;
+        } else if (title.includes("Just a moment") || title.includes("Attention Required!")) {
+          isGated = true;
+          gateReason = "Cloudflare Challenge";
+        } else {
+          const hasTurnstile = await page.locator('input[name="cf-turnstile-response"], .cf-turnstile').count();
+          if (hasTurnstile > 0) {
+            isGated = true;
+            gateReason = "Cloudflare Turnstile";
+          }
+        }
+
+        const elements = isGated ? [] : await extractElements(page);
         const screenshot = await page.screenshot({ fullPage: true, type: "png" });
         const screenshotUrl = await screenshotStorage.uploadScreenshot(
           crawlId,
@@ -90,10 +127,12 @@ async function crawlSite(
           crawlId,
           url: pageUrl,
           title,
-          statusCode: response?.status() ?? null,
+          statusCode,
           elements,
           screenshotUrl,
           crawledAt: new Date(),
+          isGated,
+          gateReason: isGated ? gateReason : undefined,
         };
 
         await crawlStorage.addPage(crawledPage);
@@ -106,12 +145,18 @@ async function crawlSite(
 
         await job.updateProgress(Math.round((pagesCrawled / limit) * 100));
 
-        const links = await page.$$eval("a[href]", (anchors) =>
-          anchors.map((anchor) => (anchor as HTMLAnchorElement).href),
-        );
+        // Skip enqueueing links if page is gated
+        if (!isGated) {
+          const links = await page.$$eval("a[href]", (anchors) =>
+            anchors.map((anchor) => (anchor as HTMLAnchorElement).href),
+          );
 
-        for (const link of uniqueInternalLinks(url, links)) {
-          if (!visited.has(link) && !pending.includes(link)) pending.push(link);
+          for (const link of uniqueInternalLinks(url, links)) {
+            const linkCanonical = normalizeUrl(link);
+            if (!visited.has(link) && !canonicalVisited.has(linkCanonical) && !pending.includes(link)) {
+              pending.push(link);
+            }
+          }
         }
       } catch (err) {
         console.warn(`[worker] Failed to crawl ${pageUrl}:`, err);

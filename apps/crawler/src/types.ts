@@ -27,6 +27,8 @@ export interface CrawledPage {
   elements: PageElement[];
   screenshotUrl: string | null;
   crawledAt: Date;
+  isGated?: boolean;
+  gateReason?: string;
 }
 
 export interface CrawlRecord {

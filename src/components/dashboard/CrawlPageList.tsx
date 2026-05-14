@@ -25,6 +25,8 @@ export interface CrawledPage {
   elements: PageElement[];
   screenshotUrl: string | null;
   crawledAt: string;
+  isGated?: boolean;
+  gateReason?: string;
 }
 
 /* ── Component ──────────────────────────────────────────────────────────── */
@@ -162,6 +164,18 @@ export default function CrawlPageList({
                         }}
                       >
                         {page.statusCode}
+                      </span>
+                    )}
+                    {page.isGated && (
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                        style={{
+                          background: "rgba(255,77,106,0.15)",
+                          color: "var(--danger)",
+                        }}
+                        title={page.gateReason || "Access Blocked"}
+                      >
+                        Gated
                       </span>
                     )}
                   </div>

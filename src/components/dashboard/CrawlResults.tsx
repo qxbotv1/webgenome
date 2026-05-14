@@ -22,6 +22,7 @@ export default function CrawlResults({ crawlId }: CrawlResultsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+  const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -113,8 +114,48 @@ export default function CrawlResults({ crawlId }: CrawlResultsProps) {
   }
 
   /* ── Results ─────────────────────────────────────────────────────────── */
+  const hasGated = exportData?.data.some((p) => p.isGated);
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Gate Alert */}
+      {hasGated && (
+        <div
+          className="flex items-center justify-between px-4 py-3 rounded-xl border"
+          style={{
+            background: "rgba(255,77,106,0.08)",
+            borderColor: "rgba(255,77,106,0.15)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🛑</span>
+            <div>
+              <p className="text-sm font-bold text-[var(--danger)]">
+                Crawl blocked by access gate
+              </p>
+              <p className="text-xs text-[var(--danger)] opacity-80 mt-0.5">
+                This site blocked automated access. Open access window to complete verification and continue.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsUnlockModalOpen(true)}
+            className="px-4 py-2 rounded-lg text-xs font-bold transition-opacity hover:opacity-80"
+            style={{ background: "var(--danger)", color: "#fff" }}
+          >
+            Open access window
+          </button>
+        </div>
+      )}
+
+      {/* Unlock Modal */}
+      {isUnlockModalOpen && (
+        <UnlockModal
+          crawlId={crawlId}
+          onClose={() => setIsUnlockModalOpen(false)}
+        />
+      )}
+
       {/* Summary bar */}
       <div
         className="flex items-center justify-between px-4 py-3 rounded-xl"
@@ -262,4 +303,64 @@ function shortenUrl(url: string): string {
   } catch {
     return url;
   }
+}
+
+function UnlockModal({ crawlId, onClose }: { crawlId: string; onClose: () => void }) {
+  const [token, setToken] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Simulate unlock sequence
+    alert(`Unlock token submitted for ${crawlId}:\n\n${token}\n\nCrawler would now resume using this session.`);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div
+        className="w-full max-w-md rounded-2xl p-6 shadow-2xl border"
+        style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+      >
+        <h2 className="text-lg font-bold mb-2" style={{ color: "var(--text-1)" }}>
+          Unlock Crawl Session
+        </h2>
+        <p className="text-sm mb-6" style={{ color: "var(--text-3)" }}>
+          The target site has an anti-bot check. Please open the site in your own browser, solve the challenge, and paste the session cookie or token below.
+        </p>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <textarea
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="cf_clearance=... or session token"
+            className="w-full rounded-lg px-3 py-2 text-sm font-mono border outline-none"
+            style={{
+              background: "var(--bg-3)",
+              borderColor: "var(--border)",
+              color: "var(--text-1)",
+              minHeight: "100px",
+            }}
+            required
+          />
+          <div className="flex justify-end gap-3 mt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
+              style={{ color: "var(--text-2)" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+              style={{ background: "var(--teal)", color: "#000" }}
+            >
+              Resume Crawl
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
