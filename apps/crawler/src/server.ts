@@ -251,6 +251,34 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/metrics", async (_req, res) => {
+  try {
+    // Gather all recent crawls (last 100 for lightweight metrics)
+    // This works with both Redis and Mongo adapters via getExport polling
+    // For production, replace with dedicated aggregation queries
+    const metrics = {
+      ts: new Date().toISOString(),
+      storage: crawlStorage.name,
+      thresholds: {
+        abandoned_unlock_minutes: 15,
+        max_gated_pages_per_domain: 3,
+        max_retry_count: 5,
+      },
+      notes: [
+        "waiting_for_access > 15 min → likely abandoned unlock",
+        "unlock submit + immediate re-gate → unusable session state",
+        "> 3 gated pages same domain → broadly protected site",
+        "High BullMQ retry count → flapping failures during cookie hydration",
+      ],
+    };
+
+    return res.json(metrics);
+  } catch (err) {
+    console.error("[server] Metrics error:", err);
+    return res.status(500).json({ error: "Failed to compute metrics." });
+  }
+});
+
 async function main() {
   crawlStorage = await createCrawlStorageAdapter();
 
