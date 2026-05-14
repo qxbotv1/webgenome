@@ -16,6 +16,7 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
+    { label: "Dashboard", href: "/dashboard" },
     { label: "Products", href: "/products" },
     { label: "Use Cases", href: "/use-cases" },
     { label: "Pricing", href: "/pricing" },
@@ -69,7 +70,7 @@ export default function Navbar() {
             Sign In
           </a>
           <Link
-            href="/#waitlist"
+            href="/dashboard"
             className="text-sm font-bold px-5 py-2 rounded-lg transition-all duration-150 hover:opacity-90"
             style={{ background: "linear-gradient(135deg,#00D4FF,#0080A6)", color: "#080D1A" }}
           >
@@ -107,7 +108,7 @@ export default function Navbar() {
             </Link>
           ))}
           <Link
-            href="/#waitlist"
+            href="/dashboard"
             className="text-sm font-bold px-5 py-3 rounded-lg text-center mt-2"
             style={{ background: "linear-gradient(135deg,#00D4FF,#0080A6)", color: "#080D1A" }}
             onClick={() => setOpen(false)}
