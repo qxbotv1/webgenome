@@ -115,6 +115,9 @@ export default function CrawlResults({ crawlId }: CrawlResultsProps) {
 
   /* ── Results ─────────────────────────────────────────────────────────── */
   const hasGated = exportData?.data.some((p) => p.isGated);
+  const accessiblePages = exportData?.data.filter((p) => !p.isGated).length ?? 0;
+  const gatedPage = exportData?.data.find((p) => p.isGated);
+  const siteUrl = exportData?.siteUrl ?? "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -131,16 +134,20 @@ export default function CrawlResults({ crawlId }: CrawlResultsProps) {
             <span className="text-xl">🛑</span>
             <div>
               <p className="text-sm font-bold text-[var(--danger)]">
-                Crawl blocked by access gate
+                Crawl paused at first access gate
               </p>
               <p className="text-xs text-[var(--danger)] opacity-80 mt-0.5">
-                This site blocked automated access. Open access window to complete verification and continue.
+                {accessiblePages} accessible page{accessiblePages !== 1 ? "s" : ""} crawled before protection blocked further discovery.
+                {gatedPage?.gateReason ? ` (${gatedPage.gateReason})` : ""}
+              </p>
+              <p className="text-[10px] mt-1 opacity-60" style={{ color: "var(--danger)" }}>
+                No further pages will be attempted until access is provided.
               </p>
             </div>
           </div>
           <button
             onClick={() => setIsUnlockModalOpen(true)}
-            className="px-4 py-2 rounded-lg text-xs font-bold transition-opacity hover:opacity-80"
+            className="px-4 py-2 rounded-lg text-xs font-bold transition-opacity hover:opacity-80 whitespace-nowrap"
             style={{ background: "var(--danger)", color: "#fff" }}
           >
             Open access window
@@ -152,6 +159,7 @@ export default function CrawlResults({ crawlId }: CrawlResultsProps) {
       {isUnlockModalOpen && (
         <UnlockModal
           crawlId={crawlId}
+          siteUrl={siteUrl}
           onClose={() => setIsUnlockModalOpen(false)}
         />
       )}
@@ -184,6 +192,11 @@ export default function CrawlResults({ crawlId }: CrawlResultsProps) {
             href={`/api/crawl/${crawlId}/export?format=csv`}
             label="CSV"
             color="var(--green)"
+          />
+          <ExportButton
+            href={`/api/crawl/${crawlId}/export?format=html`}
+            label="HTML"
+            color="#FFA726"
           />
         </div>
       </div>
@@ -305,9 +318,14 @@ function shortenUrl(url: string): string {
   }
 }
 
-function UnlockModal({ crawlId, onClose }: { crawlId: string; onClose: () => void }) {
+function UnlockModal({ crawlId, siteUrl, onClose }: { crawlId: string; siteUrl: string; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<"open" | "paste">("open");
   const [token, setToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleOpenSite = () => {
+    window.open(siteUrl, "_blank", "noopener,noreferrer");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,52 +349,120 @@ function UnlockModal({ crawlId, onClose }: { crawlId: string; onClose: () => voi
     }
   };
 
+  const tabStyle = (active: boolean) => ({
+    background: active ? "var(--teal-glow)" : "transparent",
+    color: active ? "var(--teal)" : "var(--text-3)",
+    borderBottom: active ? "2px solid var(--teal)" : "2px solid transparent",
+  });
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
       <div
-        className="w-full max-w-md rounded-2xl p-6 shadow-2xl border"
+        className="w-full max-w-lg rounded-2xl shadow-2xl border overflow-hidden"
         style={{ background: "var(--surface)", borderColor: "var(--border)" }}
       >
-        <h2 className="text-lg font-bold mb-2" style={{ color: "var(--text-1)" }}>
-          Unlock Crawl Session
-        </h2>
-        <p className="text-sm mb-6" style={{ color: "var(--text-3)" }}>
-          The target site has an anti-bot check. Please open the site in your own browser, solve the challenge, and paste the session cookie or token below.
-        </p>
+        {/* Header */}
+        <div className="px-6 pt-6 pb-3">
+          <h2 className="text-lg font-bold mb-1" style={{ color: "var(--text-1)" }}>
+            Unlock Crawl Session
+          </h2>
+          <p className="text-xs" style={{ color: "var(--text-3)" }}>
+            Open the target website to log in or solve a CAPTCHA, then provide the session token to continue crawling.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <textarea
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="cf_clearance=... or session token"
-            className="w-full rounded-lg px-3 py-2 text-sm font-mono border outline-none"
-            style={{
-              background: "var(--bg-3)",
-              borderColor: "var(--border)",
-              color: "var(--text-1)",
-              minHeight: "100px",
-            }}
-            required
-          />
-          <div className="flex justify-end gap-3 mt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
-              style={{ color: "var(--text-2)" }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ background: "var(--teal)", color: "#000" }}
-            >
-              {isSubmitting ? "Resuming..." : "Resume Crawl"}
-            </button>
-          </div>
-        </form>
+        {/* Tabs */}
+        <div className="flex border-b" style={{ borderColor: "var(--border)" }}>
+          <button
+            onClick={() => setActiveTab("open")}
+            className="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors"
+            style={tabStyle(activeTab === "open")}
+          >
+            Open Website
+          </button>
+          <button
+            onClick={() => setActiveTab("paste")}
+            className="flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors"
+            style={tabStyle(activeTab === "paste")}
+          >
+            Paste Token
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="px-6 py-5">
+          {activeTab === "open" ? (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ background: "var(--teal-glow)", border: "1px solid rgba(0,212,255,0.15)" }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </div>
+              <p className="text-sm text-center" style={{ color: "var(--text-2)" }}>
+                Opens <span className="font-mono text-xs" style={{ color: "var(--teal)" }}>{siteUrl ? new URL(siteUrl).host : "target site"}</span> in a new tab.
+                Log in or solve the CAPTCHA, then switch to the <strong>Paste Token</strong> tab.
+              </p>
+              <button
+                onClick={handleOpenSite}
+                className="px-6 py-2.5 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+                style={{ background: "var(--teal)", color: "#000" }}
+              >
+                Open in new tab
+              </button>
+              <p className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                After solving, copy the <code className="text-[10px]" style={{ background: "var(--bg-3)", padding: "1px 4px", borderRadius: 3 }}>cf_clearance</code> cookie from your browser DevTools.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="text-[10px] uppercase tracking-wider font-semibold mb-1.5 block" style={{ color: "var(--text-3)" }}>
+                  Session cookie or clearance token
+                </label>
+                <textarea
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="cf_clearance=abc123... or full cookie string"
+                  className="w-full rounded-lg px-3 py-2.5 text-sm font-mono border outline-none resize-none"
+                  style={{
+                    background: "var(--bg-3)",
+                    borderColor: "var(--border)",
+                    color: "var(--text-1)",
+                    minHeight: "90px",
+                  }}
+                  required
+                />
+              </div>
+              <p className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                The crawler will inject this token into a new browser session and retry the blocked page.
+                Tokens may fail if the originating IP or user-agent differs from the crawler environment.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
+                  style={{ color: "var(--text-2)" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !token.trim()}
+                  className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ background: "var(--teal)", color: "#000" }}
+                >
+                  {isSubmitting ? "Resuming…" : "Resume Crawl"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -70,6 +70,7 @@ async function crawlSite(
     viewport: { width: 1280, height: 900 },
   });
 
+  // Inject session cookie if resuming from an unlock
   if (job.data.sessionCookie) {
     try {
       const siteUrl = new URL(url);
@@ -91,17 +92,18 @@ async function crawlSite(
   const canonicalVisited = new Set<string>();
   const pending = [url];
   let pagesCrawled = 0;
-  let hitAnyGate = false;
 
+  // Rehydrate state if resuming a previously gated crawl
   const existingPages = await crawlStorage.getPages(crawlId, { skip: 0, limit });
   if (existingPages.length > 0) {
-    pending.pop(); // remove initial URL
-    for (const page of existingPages) {
-      if (!page.isGated) {
-        visited.add(page.url);
-        canonicalVisited.add(normalizeUrl(page.url));
+    pending.length = 0; // clear initial URL
+    for (const ep of existingPages) {
+      if (!ep.isGated) {
+        visited.add(ep.url);
+        canonicalVisited.add(normalizeUrl(ep.url));
       } else {
-        if (!pending.includes(page.url)) pending.push(page.url);
+        // Re-queue previously gated pages for retry with new session
+        if (!pending.includes(ep.url)) pending.push(ep.url);
       }
     }
     pagesCrawled = visited.size;
@@ -130,7 +132,7 @@ async function crawlSite(
         const title = await page.title();
         const statusCode = response?.status() ?? null;
 
-        // Gate detection heuristics
+        // ── Gate detection heuristics ──
         let isGated = false;
         let gateReason = "";
 
@@ -148,9 +150,44 @@ async function crawlSite(
           }
         }
 
-        if (isGated) hitAnyGate = true;
+        // ── HARD STOP on first gate ──
+        if (isGated) {
+          const screenshot = await page.screenshot({ fullPage: true, type: "png" });
+          const screenshotUrl = await screenshotStorage.uploadScreenshot(
+            crawlId,
+            pageSlug(pageUrl, pagesCrawled + 1),
+            screenshot,
+          );
 
-        const elements = isGated ? [] : await extractElements(page);
+          // Persist the single blocker page
+          await crawlStorage.addPage({
+            crawlId,
+            url: pageUrl,
+            title,
+            statusCode,
+            elements: [],
+            screenshotUrl,
+            crawledAt: new Date(),
+            isGated: true,
+            gateReason,
+          });
+
+          // Immediately set waiting_for_access and break
+          await crawlStorage.updateCrawl(crawlId, {
+            status: "waiting_for_access",
+            pagesCrawled,
+            pagesTotal: pagesCrawled,
+            blockedAtUrl: pageUrl,
+            blockedReason: gateReason,
+          });
+
+          console.log(`[worker] ${crawlId} HARD STOP — gate detected at ${pageUrl} (${gateReason}). ${pagesCrawled} accessible pages before gate.`);
+          await page.close();
+          break; // ← exit crawl loop immediately
+        }
+
+        // ── Normal page processing ──
+        const elements = await extractElements(page);
         const screenshot = await page.screenshot({ fullPage: true, type: "png" });
         const screenshotUrl = await screenshotStorage.uploadScreenshot(
           crawlId,
@@ -158,7 +195,7 @@ async function crawlSite(
           screenshot,
         );
 
-        const crawledPage: CrawledPage = {
+        await crawlStorage.addPage({
           crawlId,
           url: pageUrl,
           title,
@@ -166,14 +203,7 @@ async function crawlSite(
           elements,
           screenshotUrl,
           crawledAt: new Date(),
-          isGated,
-          gateReason: isGated ? gateReason : undefined,
-        };
-
-        // Update if existing, else add. Storage adapter might not have upsert, so let's just add.
-        // Wait, if it was gated before and we crawled it again, we might duplicate it in DB.
-        // For simplicity, we just append to DB. 
-        await crawlStorage.addPage(crawledPage);
+        });
         pagesCrawled += 1;
 
         await crawlStorage.updateCrawl(crawlId, {
@@ -183,17 +213,15 @@ async function crawlSite(
 
         await job.updateProgress(Math.round((pagesCrawled / limit) * 100));
 
-        // Skip enqueueing links if page is gated
-        if (!isGated) {
-          const links = await page.$$eval("a[href]", (anchors) =>
-            anchors.map((anchor) => (anchor as HTMLAnchorElement).href),
-          );
+        // Enqueue internal links
+        const links = await page.$$eval("a[href]", (anchors) =>
+          anchors.map((anchor) => (anchor as HTMLAnchorElement).href),
+        );
 
-          for (const link of uniqueInternalLinks(url, links)) {
-            const linkCanonical = normalizeUrl(link);
-            if (!visited.has(link) && !canonicalVisited.has(linkCanonical) && !pending.includes(link)) {
-              pending.push(link);
-            }
+        for (const link of uniqueInternalLinks(url, links)) {
+          const linkCanonical = normalizeUrl(link);
+          if (!visited.has(link) && !canonicalVisited.has(linkCanonical) && !pending.includes(link)) {
+            pending.push(link);
           }
         }
       } catch (err) {
@@ -203,14 +231,17 @@ async function crawlSite(
       }
     }
 
-    await crawlStorage.updateCrawl(crawlId, {
-      status: hitAnyGate ? "waiting_for_access" : "done",
-      pagesTotal: pagesCrawled,
-      pagesCrawled,
-      finishedAt: new Date(),
-    });
-
-    console.log(`[worker] ${crawlId} completed: ${pagesCrawled} pages (gated: ${hitAnyGate})`);
+    // If loop finished without hitting a gate, mark done
+    const currentCrawl = await crawlStorage.getCrawl(crawlId);
+    if (currentCrawl && currentCrawl.status === "running") {
+      await crawlStorage.updateCrawl(crawlId, {
+        status: "done",
+        pagesTotal: pagesCrawled,
+        pagesCrawled,
+        finishedAt: new Date(),
+      });
+      console.log(`[worker] ${crawlId} completed: ${pagesCrawled} pages`);
+    }
   } catch (err) {
     await crawlStorage.updateCrawl(crawlId, {
       status: "failed",

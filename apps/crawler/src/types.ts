@@ -40,6 +40,8 @@ export interface CrawlRecord {
   pagesTotal: number;
   pagesCrawled: number;
   errorMessage?: string;
+  blockedAtUrl?: string;
+  blockedReason?: string;
   createdAt: Date;
   startedAt?: Date;
   finishedAt?: Date;
