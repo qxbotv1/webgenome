@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import CrawlForm from "@/components/dashboard/CrawlForm";
 import CrawlStatus from "@/components/dashboard/CrawlStatus";
+import CrawlResults from "@/components/dashboard/CrawlResults";
 
 interface CrawlHistoryItem {
   crawlId: string;
@@ -14,14 +15,17 @@ interface CrawlHistoryItem {
 
 export default function DashboardPage() {
   const [activeCrawlId, setActiveCrawlId] = useState<string | null>(null);
+  const [completedCrawlId, setCompletedCrawlId] = useState<string | null>(null);
   const [history, setHistory] = useState<CrawlHistoryItem[]>([]);
 
   const handleCrawlSubmitted = useCallback((crawlId: string) => {
     setActiveCrawlId(crawlId);
+    setCompletedCrawlId(null);
   }, []);
 
   const handleComplete = useCallback(
     (data: CrawlHistoryItem & { crawlId: string }) => {
+      setCompletedCrawlId(data.crawlId);
       setHistory((prev) => [
         {
           crawlId: data.crawlId,
@@ -38,10 +42,16 @@ export default function DashboardPage() {
 
   const handleReset = useCallback(() => {
     setActiveCrawlId(null);
+    setCompletedCrawlId(null);
+  }, []);
+
+  const handleViewResults = useCallback((crawlId: string) => {
+    setCompletedCrawlId(crawlId);
+    setActiveCrawlId(crawlId);
   }, []);
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-6 py-8">
+    <div className="w-full max-w-6xl mx-auto px-6 py-8">
       {/* Header */}
       <div className="mb-8">
         <h1
@@ -56,65 +66,64 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
-        {/* Left: Form */}
-        <div
-          className="rounded-xl p-5"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          <div className="mb-4 flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-md flex items-center justify-center"
-              style={{
-                background: "var(--teal-glow)",
-                border: "1px solid rgba(0,212,255,0.15)",
-              }}
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--teal)"
-                strokeWidth="2.5"
+      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
+        {/* Left column: Form + Status + History */}
+        <div className="flex flex-col gap-4">
+          {/* Form card */}
+          <div
+            className="rounded-xl p-5"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <div className="mb-4 flex items-center gap-2">
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center"
+                style={{
+                  background: "var(--teal-glow)",
+                  border: "1px solid rgba(0,212,255,0.15)",
+                }}
               >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--teal)"
+                  strokeWidth="2.5"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+              </div>
+              <span
+                className="text-sm font-bold"
+                style={{ color: "var(--text-1)" }}
+              >
+                New Crawl
+              </span>
             </div>
-            <span
-              className="text-sm font-bold"
-              style={{ color: "var(--text-1)" }}
-            >
-              New Crawl
-            </span>
+
+            <CrawlForm
+              onCrawlSubmitted={handleCrawlSubmitted}
+              disabled={!!activeCrawlId && !completedCrawlId}
+            />
           </div>
 
-          <CrawlForm
-            onCrawlSubmitted={handleCrawlSubmitted}
-            disabled={!!activeCrawlId}
-          />
-        </div>
-
-        {/* Right: Status / Empty State */}
-        <div className="flex flex-col gap-4">
-          {activeCrawlId ? (
+          {/* Active crawl status — visually dominant */}
+          {activeCrawlId && (
             <CrawlStatus
               key={activeCrawlId}
               crawlId={activeCrawlId}
               onComplete={handleComplete}
               onReset={handleReset}
             />
-          ) : (
-            <EmptyState hasHistory={history.length > 0} />
           )}
 
           {/* History */}
           {history.length > 0 && (
-            <div className="flex flex-col gap-2 mt-2">
+            <div className="flex flex-col gap-2 mt-1">
               <span
                 className="text-xs font-semibold uppercase tracking-wider"
                 style={{ color: "var(--text-3)" }}
@@ -122,9 +131,23 @@ export default function DashboardPage() {
                 Recent Crawls
               </span>
               {history.map((item) => (
-                <HistoryRow key={item.crawlId} item={item} />
+                <HistoryRow
+                  key={item.crawlId}
+                  item={item}
+                  isViewing={completedCrawlId === item.crawlId}
+                  onViewResults={() => handleViewResults(item.crawlId)}
+                />
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Right column: Results or empty state */}
+        <div>
+          {completedCrawlId ? (
+            <CrawlResults crawlId={completedCrawlId} />
+          ) : (
+            <EmptyState hasHistory={history.length > 0} />
           )}
         </div>
       </div>
@@ -135,7 +158,7 @@ export default function DashboardPage() {
 function EmptyState({ hasHistory }: { hasHistory: boolean }) {
   return (
     <div
-      className="flex flex-col items-center justify-center py-16 rounded-xl"
+      className="flex flex-col items-center justify-center py-20 rounded-xl"
       style={{
         background: "var(--bg-2)",
         border: "1px dashed var(--border)",
@@ -168,13 +191,21 @@ function EmptyState({ hasHistory }: { hasHistory: boolean }) {
         {hasHistory ? "Ready for another crawl" : "No active crawls"}
       </p>
       <p className="text-xs" style={{ color: "var(--text-3)" }}>
-        Enter a URL on the left to start extracting website data.
+        Start a crawl to see structured results here.
       </p>
     </div>
   );
 }
 
-function HistoryRow({ item }: { item: CrawlHistoryItem }) {
+function HistoryRow({
+  item,
+  isViewing,
+  onViewResults,
+}: {
+  item: CrawlHistoryItem;
+  isViewing: boolean;
+  onViewResults: () => void;
+}) {
   const isDone = item.status === "done";
   const timeAgo = item.finishedAt
     ? formatTimeAgo(new Date(item.finishedAt))
@@ -184,8 +215,10 @@ function HistoryRow({ item }: { item: CrawlHistoryItem }) {
     <div
       className="flex items-center justify-between px-4 py-3 rounded-lg transition-colors"
       style={{
-        background: "var(--bg-2)",
-        border: "1px solid var(--border)",
+        background: isViewing ? "var(--teal-glow)" : "var(--bg-2)",
+        border: isViewing
+          ? "1px solid rgba(0,212,255,0.15)"
+          : "1px solid var(--border)",
       }}
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -196,7 +229,7 @@ function HistoryRow({ item }: { item: CrawlHistoryItem }) {
         <div className="flex flex-col min-w-0">
           <span
             className="text-xs font-mono font-medium truncate"
-            style={{ color: "var(--text-2)" }}
+            style={{ color: isViewing ? "var(--teal)" : "var(--text-2)" }}
           >
             {item.siteUrl || item.crawlId}
           </span>
@@ -206,7 +239,22 @@ function HistoryRow({ item }: { item: CrawlHistoryItem }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0">
+        {isDone && (
+          <button
+            onClick={onViewResults}
+            className="text-[10px] font-bold uppercase px-2 py-1 rounded transition-colors"
+            style={{
+              color: isViewing ? "#080D1A" : "var(--teal)",
+              background: isViewing
+                ? "var(--teal)"
+                : "var(--teal-glow)",
+              border: "1px solid rgba(0,212,255,0.15)",
+            }}
+          >
+            View
+          </button>
+        )}
         <a
           href={`/api/crawl/${item.crawlId}/export?format=json`}
           target="_blank"
