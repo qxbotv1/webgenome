@@ -1,9 +1,10 @@
-export type CrawlStatus = "queued" | "running" | "done" | "failed";
+export type CrawlStatus = "queued" | "running" | "done" | "failed" | "waiting_for_access";
 
 export interface CrawlJob {
   crawlId: string;
   url: string;
   maxPages: number;
+  sessionCookie?: string;
 }
 
 export interface PageElement {

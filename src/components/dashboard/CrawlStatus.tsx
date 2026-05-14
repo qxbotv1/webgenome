@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 interface CrawlData {
   crawlId: string;
   siteUrl: string;
-  status: "queued" | "running" | "done" | "failed";
+  status: "queued" | "running" | "done" | "failed" | "waiting_for_access";
   maxPages: number;
   pagesTotal: number;
   pagesCrawled: number;
@@ -51,6 +51,13 @@ const STATUS_CONFIG = {
     borderColor: "rgba(255,77,106,0.15)",
     pulse: false,
   },
+  waiting_for_access: {
+    label: "Paused",
+    color: "#FFA726",
+    bgColor: "rgba(255,167,38,0.08)",
+    borderColor: "rgba(255,167,38,0.15)",
+    pulse: true,
+  },
 };
 
 export default function CrawlStatus({ crawlId, onComplete, onReset }: CrawlStatusProps) {
@@ -73,12 +80,12 @@ export default function CrawlStatus({ crawlId, onComplete, onReset }: CrawlStatu
       setData(result);
       setError(null);
 
-      if (result.status === "done" || result.status === "failed") {
+      if (result.status === "done" || result.status === "failed" || result.status === "waiting_for_access") {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
-        if (result.status === "done") {
+        if (result.status === "done" || result.status === "waiting_for_access") {
           onComplete(result);
         }
       }

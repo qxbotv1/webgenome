@@ -307,12 +307,28 @@ function shortenUrl(url: string): string {
 
 function UnlockModal({ crawlId, onClose }: { crawlId: string; onClose: () => void }) {
   const [token, setToken] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate unlock sequence
-    alert(`Unlock token submitted for ${crawlId}:\n\n${token}\n\nCrawler would now resume using this session.`);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/crawl/${crawlId}/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert(`Failed to unlock: ${data.error}`);
+      }
+    } catch (err) {
+      alert("Network error trying to unlock.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -353,10 +369,11 @@ function UnlockModal({ crawlId, onClose }: { crawlId: string; onClose: () => voi
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{ background: "var(--teal)", color: "#000" }}
             >
-              Resume Crawl
+              {isSubmitting ? "Resuming..." : "Resume Crawl"}
             </button>
           </div>
         </form>

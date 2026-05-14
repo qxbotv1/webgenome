@@ -70,10 +70,43 @@ async function crawlSite(
     viewport: { width: 1280, height: 900 },
   });
 
+  if (job.data.sessionCookie) {
+    try {
+      const siteUrl = new URL(url);
+      await context.addCookies([
+        {
+          name: "cf_clearance",
+          value: job.data.sessionCookie,
+          domain: siteUrl.hostname,
+          path: "/",
+        },
+      ]);
+      console.log(`[worker] Injected session cookie for ${crawlId}`);
+    } catch (err) {
+      console.warn(`[worker] Failed to inject cookie:`, err);
+    }
+  }
+
   const visited = new Set<string>();
   const canonicalVisited = new Set<string>();
   const pending = [url];
   let pagesCrawled = 0;
+  let hitAnyGate = false;
+
+  const existingPages = await crawlStorage.getPages(crawlId, { skip: 0, limit });
+  if (existingPages.length > 0) {
+    pending.pop(); // remove initial URL
+    for (const page of existingPages) {
+      if (!page.isGated) {
+        visited.add(page.url);
+        canonicalVisited.add(normalizeUrl(page.url));
+      } else {
+        if (!pending.includes(page.url)) pending.push(page.url);
+      }
+    }
+    pagesCrawled = visited.size;
+    if (pending.length === 0 && pagesCrawled === 0) pending.push(url);
+  }
 
   try {
     while (pending.length > 0 && pagesCrawled < limit) {
@@ -115,6 +148,8 @@ async function crawlSite(
           }
         }
 
+        if (isGated) hitAnyGate = true;
+
         const elements = isGated ? [] : await extractElements(page);
         const screenshot = await page.screenshot({ fullPage: true, type: "png" });
         const screenshotUrl = await screenshotStorage.uploadScreenshot(
@@ -135,6 +170,9 @@ async function crawlSite(
           gateReason: isGated ? gateReason : undefined,
         };
 
+        // Update if existing, else add. Storage adapter might not have upsert, so let's just add.
+        // Wait, if it was gated before and we crawled it again, we might duplicate it in DB.
+        // For simplicity, we just append to DB. 
         await crawlStorage.addPage(crawledPage);
         pagesCrawled += 1;
 
@@ -166,13 +204,13 @@ async function crawlSite(
     }
 
     await crawlStorage.updateCrawl(crawlId, {
-      status: "done",
+      status: hitAnyGate ? "waiting_for_access" : "done",
       pagesTotal: pagesCrawled,
       pagesCrawled,
       finishedAt: new Date(),
     });
 
-    console.log(`[worker] ${crawlId} completed: ${pagesCrawled} pages`);
+    console.log(`[worker] ${crawlId} completed: ${pagesCrawled} pages (gated: ${hitAnyGate})`);
   } catch (err) {
     await crawlStorage.updateCrawl(crawlId, {
       status: "failed",

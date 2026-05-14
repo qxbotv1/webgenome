@@ -66,6 +66,29 @@ app.get("/crawl/:id", async (req, res) => {
   return res.json(crawl);
 });
 
+app.post("/crawl/:id/unlock", async (req, res) => {
+  const crawl = await crawlStorage.getCrawl(req.params.id);
+  if (!crawl) return res.status(404).json({ error: "Crawl not found." });
+
+  const { token } = req.body;
+  if (!token || typeof token !== "string") {
+    return res.status(400).json({ error: "A valid string token must be provided." });
+  }
+
+  // Update status back to queued
+  await crawlStorage.updateCrawl(crawl.crawlId, { status: "queued" });
+
+  // Re-enqueue the job with the session token
+  await enqueueCrawl({
+    crawlId: crawl.crawlId,
+    url: crawl.siteUrl,
+    maxPages: crawl.maxPages,
+    sessionCookie: token.trim(),
+  });
+
+  return res.status(202).json({ status: "queued", message: "Crawl resumed with provided access token." });
+});
+
 app.get("/crawl/:id/pages", async (req, res) => {
   const limit = Math.min(Number(req.query.limit || 20), 100);
   const skip = Math.max(Number(req.query.skip || 0), 0);
@@ -81,7 +104,7 @@ app.get("/crawl/:id/export", async (req, res) => {
     return res.status(404).json({ error: "Crawl not found." });
   }
 
-  if (payload.crawl.status !== "done") {
+  if (payload.crawl.status !== "done" && payload.crawl.status !== "waiting_for_access") {
     return res.status(202).json({
       error: "Crawl is not complete yet.",
       status: payload.crawl.status,
