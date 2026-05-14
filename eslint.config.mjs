@@ -11,6 +11,8 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "apps/crawler/dist/**",
+    "apps/crawler/node_modules/**",
     "next-env.d.ts",
   ]),
 ]);
