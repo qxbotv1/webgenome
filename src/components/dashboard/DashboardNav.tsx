@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 
 export default function DashboardNav() {
   return (
@@ -52,16 +53,7 @@ export default function DashboardNav() {
         >
           ← Back to site
         </Link>
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold"
-          style={{
-            background: "var(--surface-2)",
-            color: "var(--teal)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          U
-        </div>
+        <UserButton />
       </div>
     </nav>
   );

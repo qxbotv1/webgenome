@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,17 @@ export async function GET(req: NextRequest, context: RouteContext) {
   const format = req.nextUrl.searchParams.get("format") || "json";
 
   try {
+    const { userId } = await auth();
+
+    // Verify ownership first
+    const verifyRes = await fetch(`${CRAWLER_API_URL}/crawl/${id}`);
+    if (verifyRes.ok) {
+      const crawlData = await verifyRes.json();
+      if (crawlData.userId && crawlData.userId !== userId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     const res = await fetch(`${CRAWLER_API_URL}/crawl/${id}/export?format=${format}`);
 
     if (format === "csv") {
@@ -21,6 +33,16 @@ export async function GET(req: NextRequest, context: RouteContext) {
         headers: {
           "Content-Type": "text/csv",
           "Content-Disposition": `attachment; filename="webgenome-${id}.csv"`,
+        },
+      });
+    }
+    
+    if (format === "html") {
+      return new NextResponse(await res.text(), {
+        status: res.status,
+        headers: {
+          "Content-Type": "text/html",
+          "Content-Disposition": `attachment; filename="webgenome-${id}.html"`,
         },
       });
     }

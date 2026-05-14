@@ -5,6 +5,7 @@ export interface CrawlJob {
   url: string;
   maxPages: number;
   sessionCookie?: string;
+  userId?: string;
 }
 
 export interface PageElement {
@@ -34,6 +35,7 @@ export interface CrawledPage {
 
 export interface CrawlRecord {
   crawlId: string;
+  userId?: string;
   siteUrl: string;
   status: CrawlStatus;
   maxPages: number;

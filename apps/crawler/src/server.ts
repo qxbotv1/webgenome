@@ -18,6 +18,7 @@ let crawlStorage: CrawlStorageAdapter;
 const crawlSchema = z.object({
   url: z.string().url(),
   maxPages: z.number().int().min(1).max(50).default(10),
+  userId: z.string().optional(),
 });
 
 function csvCell(value: unknown): string {
@@ -32,11 +33,12 @@ app.post("/crawl", async (req, res) => {
   }
 
   try {
-    const { url, maxPages } = parsed.data;
+    const { url, maxPages, userId } = parsed.data;
     const crawlId = `crwl_${uuidv4().slice(0, 8)}`;
 
     const record: CrawlRecord = {
       crawlId,
+      userId,
       siteUrl: url,
       status: "queued",
       maxPages,
@@ -46,7 +48,7 @@ app.post("/crawl", async (req, res) => {
     };
 
     await crawlStorage.createCrawl(record);
-    await enqueueCrawl({ crawlId, url, maxPages });
+    await enqueueCrawl({ crawlId, url, maxPages, userId });
 
     return res.status(202).json({
       crawlId,
