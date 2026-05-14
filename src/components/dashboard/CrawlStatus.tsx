@@ -57,18 +57,18 @@ export default function CrawlStatus({ crawlId, onComplete, onReset }: CrawlStatu
   const [data, setData] = useState<CrawlData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const mountedRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const poll = useCallback(async () => {
+  const poll = useCallback(async (signal: AbortSignal) => {
     try {
-      const res = await fetch(`/api/crawl/${crawlId}`);
+      const res = await fetch(`/api/crawl/${crawlId}`, { signal });
       if (!res.ok) {
         setError("Failed to fetch crawl status.");
         return;
       }
 
       const result: CrawlData = await res.json();
-      if (!mountedRef.current) return;
+      if (signal.aborted) return;
 
       setData(result);
       setError(null);
@@ -82,20 +82,24 @@ export default function CrawlStatus({ crawlId, onComplete, onReset }: CrawlStatu
           onComplete(result);
         }
       }
-    } catch {
-      if (mountedRef.current) {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (!signal.aborted) {
         setError("Network error polling status.");
       }
     }
   }, [crawlId, onComplete]);
 
   useEffect(() => {
-    mountedRef.current = true;
-    poll(); // initial fetch
-    intervalRef.current = setInterval(poll, 2000);
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    poll(controller.signal); // initial fetch
+    intervalRef.current = setInterval(() => poll(controller.signal), 2000);
 
     return () => {
-      mountedRef.current = false;
+      controller.abort();
+      abortRef.current = null;
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }

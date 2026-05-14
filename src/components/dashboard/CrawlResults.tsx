@@ -24,40 +24,41 @@ export default function CrawlResults({ crawlId }: CrawlResultsProps) {
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function fetchExport() {
       setLoading(true);
       setError(null);
 
       try {
-        const res = await fetch(`/api/crawl/${crawlId}/export?format=json`);
+        const res = await fetch(`/api/crawl/${crawlId}/export?format=json`, {
+          signal: controller.signal,
+        });
         if (!res.ok) {
           setError("Failed to load crawl results.");
           return;
         }
 
         const data: ExportData = await res.json();
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
 
         setExportData(data);
 
         // Auto-select first page
-        if (data.data.length > 0 && !selectedUrl) {
+        if (data.data.length > 0) {
           setSelectedUrl(data.data[0].url);
         }
-      } catch {
-        if (!cancelled) setError("Network error loading results.");
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (!controller.signal.aborted) setError("Network error loading results.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     fetchExport();
-    return () => {
-      cancelled = true;
-    };
-  }, [crawlId]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => controller.abort();
+  }, [crawlId]);
 
   const selectedPage = useMemo(
     () => exportData?.data.find((p) => p.url === selectedUrl) ?? null,

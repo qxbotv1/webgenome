@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { Suspense, useState, useCallback, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import CrawlForm from "@/components/dashboard/CrawlForm";
 import CrawlStatus from "@/components/dashboard/CrawlStatus";
 import CrawlResults from "@/components/dashboard/CrawlResults";
@@ -14,14 +15,58 @@ interface CrawlHistoryItem {
 }
 
 export default function DashboardPage() {
-  const [activeCrawlId, setActiveCrawlId] = useState<string | null>(null);
-  const [completedCrawlId, setCompletedCrawlId] = useState<string | null>(null);
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-6xl mx-auto px-6 py-8">
+          <div className="animate-pulse flex flex-col gap-4">
+            <div className="h-8 w-48 rounded" style={{ background: "var(--surface)" }} />
+            <div className="h-4 w-72 rounded" style={{ background: "var(--bg-3)" }} />
+          </div>
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const crawlParam = searchParams.get("crawl");
+
+  const [activeCrawlId, setActiveCrawlId] = useState<string | null>(crawlParam);
+  const [completedCrawlId, setCompletedCrawlId] = useState<string | null>(crawlParam);
   const [history, setHistory] = useState<CrawlHistoryItem[]>([]);
+
+  // Sync URL → state when browser back/forward
+  useEffect(() => {
+    if (crawlParam && crawlParam !== activeCrawlId) {
+      setActiveCrawlId(crawlParam);
+      setCompletedCrawlId(crawlParam);
+    }
+  }, [crawlParam]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pushCrawlToUrl = useCallback(
+    (crawlId: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (crawlId) {
+        params.set("crawl", crawlId);
+      } else {
+        params.delete("crawl");
+      }
+      router.replace(`/dashboard?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router],
+  );
 
   const handleCrawlSubmitted = useCallback((crawlId: string) => {
     setActiveCrawlId(crawlId);
     setCompletedCrawlId(null);
-  }, []);
+    pushCrawlToUrl(crawlId);
+  }, [pushCrawlToUrl]);
 
   const handleComplete = useCallback(
     (data: CrawlHistoryItem & { crawlId: string }) => {
@@ -43,12 +88,14 @@ export default function DashboardPage() {
   const handleReset = useCallback(() => {
     setActiveCrawlId(null);
     setCompletedCrawlId(null);
-  }, []);
+    pushCrawlToUrl(null);
+  }, [pushCrawlToUrl]);
 
   const handleViewResults = useCallback((crawlId: string) => {
     setCompletedCrawlId(crawlId);
     setActiveCrawlId(crawlId);
-  }, []);
+    pushCrawlToUrl(crawlId);
+  }, [pushCrawlToUrl]);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-6 py-8">
