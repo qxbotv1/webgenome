@@ -1,27 +1,20 @@
-import { Queue } from "bullmq";
 import IORedis from "ioredis";
+import { Queue } from "bullmq";
 import { CrawlJob } from "./types";
 
-function createRedisConnection() {
-  const url = process.env.REDIS_URL || process.env.KV_URL;
-
-  if (url) {
-    return new IORedis(url, {
+// Support both REDIS_URL (Railway/Upstash) and individual vars (local dev).
+export const redisConnection = process.env.REDIS_URL
+  ? new IORedis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null,
-      tls: url.startsWith("rediss://") ? {} : undefined,
-    });
-  }
-
-  return new IORedis({
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    port: Number(process.env.REDIS_PORT || 6379),
+      tls: process.env.REDIS_URL.startsWith("rediss://") ? {} : undefined,
+    })
+  : new IORedis({
+    host: process.env.REDIS_HOST!,
+    port: parseInt(process.env.REDIS_PORT || "6379"),
     password: process.env.REDIS_PASSWORD,
     tls: process.env.REDIS_TLS === "true" ? {} : undefined,
     maxRetriesPerRequest: null,
   });
-}
-
-export const redisConnection = createRedisConnection();
 
 export const crawlQueue = new Queue<CrawlJob>("crawl", {
   connection: redisConnection,
@@ -35,5 +28,5 @@ export const crawlQueue = new Queue<CrawlJob>("crawl", {
 
 export async function enqueueCrawl(job: CrawlJob): Promise<string> {
   const bullJob = await crawlQueue.add("crawl", job, { jobId: job.crawlId });
-  return bullJob.id ?? job.crawlId;
+  return bullJob.id!;
 }
